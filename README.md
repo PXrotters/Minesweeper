@@ -7,8 +7,11 @@
 ## Descriere generală
 
 🎮 Proiectul constă în implementarea jocului **Minesweeper** pe un ecran LCD TFT ST7735S de 1.8” (128×160), controlat prin SPI de către un microcontroller **Arduino UNO R3**.  
-👾 Jucătorul navighează o matrice 8×8 folosind un **joystick analogic**, iar cele **3 butoane fizice** sunt folosite pentru acțiuni precum descoperirea celulelor, marcarea steagurilor și resetarea jocului.  
+👾 Jucătorul navighează o matrice 8×8 folosind un **joystick analogic**, iar cele **2 butoane fizice** sunt folosite pentru marcarea steagurilor și resetarea jocului.  
 🔊 Un **buzzer** oferă feedback auditiv la pierdere (bombă) sau câștig.
+
+### 🧩 Schema bloc
+![Schema bloc](Hardware/schema_bloc.png)
 
 ## Hardware Design
 
@@ -26,13 +29,8 @@
 | Fire tată-tată           | Set              | 4         | 2,85 lei   | 11,40 lei |
 | Breadboard 400 puncte    | Breadboard       | 1         | 4,56 lei   | 4,56 lei |
 
-**💰 Cost total: 137,13 lei**
-
-### 🧩 Schema bloc
-
-
-
-📷 Configurația fizică finală: `final.jpg`
+### 🧩 Schema circuit
+![Schema circuit](Hardware/schema_circuit.png)
 
 ## Software Design
 
@@ -42,6 +40,17 @@
 - [`Adafruit_GFX.h`](https://github.com/adafruit/Adafruit-GFX-Library)
 - [`Adafruit_ST7735.h`](https://github.com/adafruit/Adafruit-ST7735-Library)
 - [`SPI.h`](https://www.arduino.cc/en/Reference/SPI)
+
+Jocul rulează pe o matrice 8×8 în care fiecare celulă stochează starea proprie: bombă, descoperită, steag sau număr de vecini cu bombe.
+
+Pozițiile bombelor sunt generate aleator, iar valorile vecinilor sunt calculate automat. Utilizatorul se poate deplasa prin matrice cu joystick-ul analogic și poate interacționa prin butoane:
+
+- Buton 1 / SW joystick – descoperă celule (configurat cu pull-up intern)
+- Buton 2 – marchează/șterge steag (configurat cu rezistență de pull-down)
+- Buton 3 – resetează jocul / confirmă numele (configurat cu rezistență de pull-down)
+- Buzzer – semnal sonor la pierdere (explozie bombă) sau la câștigare
+
+![Buton](Images/Button_Pull-downRezistor.jpg)
 
 ### 🔄 Funcții implementate
 
@@ -81,9 +90,55 @@
 | `setTextSize()` | Setează mărimea textului |
 | `setTextColor()` | Setează culoarea textului |
 
+<h3 align="center">📆 Rezultate</h3>
+
+<table align="center">
+  <tr>
+    <td align="center">
+      <img src="Images/meniu_principal.jpg" width="220"/><br/>
+      <b>Meniu principal</b>
+    </td>
+    <td align="center">
+      <img src="Images/meniu_nume.jpg" width="220"/><br/>
+      <b>Meniul de nume</b>
+    </td>
+    <td align="center">
+      <img src="Images/in_game.jpg" width="220"/><br/>
+      <b>In-game</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="Images/bomb_flag.png" width="220"/><br/>
+      <b>Bombă & Steag</b>
+    </td>
+    <td align="center">
+      <img src="Images/you_win.jpg" width="220"/><br/>
+      <b>Win</b>
+    </td>
+    <td align="center">
+      <img src="Images/game_over.jpg" width="220"/><br/>
+      <b>Game Over</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="3">
+      <img src="Images/time_up.jpg" width="220"/><br/>
+      <b>Timp Expirat</b>
+    </td>
+  </tr>
+</table>
+
+
 ## ✅ Concluzii
 
-Proiectul Minesweeper pe Arduino a fost o experiență foarte reușită, combinând logica jocului cu grafică interactivă în timp real. Bucla de redare continuă mi-a reamintit de temele din cursul de grafică și m-a ajutat să înțeleg mai bine optimizările necesare pentru un sistem cu resurse limitate. Am lucrat eficient cu joystick-ul, butoane, GPIO, ADC și interfața SPI, dezvoltând atât partea hardware, cât și software. A fost un exercițiu excelent de integrare între componente și logică de joc.
+Proiectul Minesweeper realizat pe Arduino a fost o experiență foarte reușită și satisfăcătoare. A reușit să aducă laolaltă funcționalitatea completă a jocului, grafică interactivă și control prin joystick și butoane, toate integrate pe un ecran TFT. Faptul că totul rulează în timp real m-a ajutat să înțeleg mai bine ce înseamnă să optimizezi interfața și logica jocului pentru resurse limitate.
+
+Mi-a plăcut în mod special partea de redare continuă a ecranului, care mi-a amintit de temele de la cursul de grafică. M-am bucurat să regăsesc acolo concepte precum bucla de render, actualizarea doar a zonelor modificate și controlul precis asupra afișajului. A fost interesant să văd cum acele noțiuni se aplică și într-un context diferit, pe un microcontroler, cu constrângeri reale de memorie și procesare.
+
+Pe lângă partea grafică, m-a ajutat mult și pe partea de hardware: am lucrat cu pini GPIO, citirea joystick-ului prin ADC, comunicația SPI cu display-ul. Toate astea m-au făcut să înțeleg mai bine ce înseamnă să îmbini partea software cu cea hardware într-un mod funcțional și coerent.
+
+În final, proiectul ăsta mi-a dat un plus de încredere și clar mi-a trezit interesul pentru proiecte embedded mai complexe.
 
 ## 📚 Bibliografie / Resurse
 
