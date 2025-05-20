@@ -7,7 +7,7 @@
 ## Descriere generală
 
 🎮 Proiectul constă în implementarea jocului **Minesweeper** pe un ecran LCD TFT ST7735S de 1.8” (128×160), controlat prin SPI de către un microcontroller **Arduino UNO R3**.  
-👾 Jucătorul navighează o matrice 8×8 folosind un **joystick analogic**, iar cele **2 butoane fizice** sunt folosite pentru marcarea steagurilor și resetarea jocului.  
+👾 Jucătorul navighează o matrice 8×8 folosind un **joystick analogic**, iar cele **2 butoane fizice** permit plasarea steagurilor, opțiunea de selecție a numelui și opțiunea de a pune pe pauza/a ieși din joc.
 🔊 Un **buzzer** oferă feedback auditiv la pierdere (bombă) sau câștig.
 
 ### 🧩 Schema bloc
@@ -45,12 +45,12 @@ Jocul rulează pe o matrice 8×8 în care fiecare celulă stochează starea prop
 
 Pozițiile bombelor sunt generate aleator, iar valorile vecinilor sunt calculate automat. Utilizatorul se poate deplasa prin matrice cu joystick-ul analogic și poate interacționa prin butoane:
 
-- Buton 1 / SW joystick – descoperă celule (configurat cu pull-up intern)
-- Buton 2 – marchează/șterge steag (configurat cu rezistență de pull-down)
-- Buton 3 – resetează jocul / confirmă numele (configurat cu rezistență de pull-down)
+- Buton 1 / SW joystick – descoperă celule (configurat cu **pull-up intern**)
+- Buton 2 – marchează/șterge steag/confirmă numele (configurat cu rezistență de **pull-down**)
+- Buton 3 – resetează jocul / confirmă numele (configurat cu rezistență de **pull-down**)
 - Buzzer – semnal sonor la pierdere (explozie bombă) sau la câștigare
 
-![Buton](Images/Button_Pull-downRezistor.jpg)
+<img src="Images/Button_Pull-downRezistor.jpg" alt="Buton" width="200"/>
 
 ### 🔄 Funcții implementate
 
@@ -71,6 +71,10 @@ Pozițiile bombelor sunt generate aleator, iar valorile vecinilor sunt calculate
 | `drawBomb()` | Desen bombă grafică |
 | `drawFlag()` | Desen steag într-o celulă |
 | `drawCrossedPickaxes()` | Desen târnăcoape încrucișate |
+| `animateBombReveal()` | Animație de reveal bombă |
+| `drawSplash()` | Desen ecran START |
+| `drawDifficultyMenu()` | Desen meniu **Settings** |
+| `drawConfirmQuitMenu()` | Desen **QUIT-MENU** |
 
 ### 📐 Funcții grafice utilizate
 
@@ -109,8 +113,8 @@ Pozițiile bombelor sunt generate aleator, iar valorile vecinilor sunt calculate
   </tr>
   <tr>
     <td align="center">
-      <img src="Images/bomb_flag.png" width="220"/><br/>
-      <b>Bombă & Steag</b>
+      <img src="Images/bombs_draw.jpg" width="220"/><br/>
+      <b>Grafic bombă</b>
     </td>
     <td align="center">
       <img src="Images/you_win.jpg" width="220"/><br/>
@@ -128,6 +132,10 @@ Pozițiile bombelor sunt generate aleator, iar valorile vecinilor sunt calculate
     </td>
   </tr>
 </table>
+
+
+## 🎥 Demo
+[Vezi demo-ul Minesweeper pe YouTube Shorts](https://www.youtube.com/shorts/V5YxSL0lWsM)
 
 
 ## ✅ Concluzii
