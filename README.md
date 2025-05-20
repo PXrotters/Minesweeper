@@ -43,6 +43,11 @@
 
 Jocul rulează pe o matrice 8×8 în care fiecare celulă stochează starea proprie: bombă, descoperită, steag sau număr de vecini cu bombe.
 
+<div style="display: flex;">
+   <img src="Images/Bomba.png" alt="Buton" width="200"/>
+   <img src="Images/flag.png" alt="Buton" width="385"/>
+</div>
+
 Pozițiile bombelor sunt generate aleator, iar valorile vecinilor sunt calculate automat. Utilizatorul se poate deplasa prin matrice cu joystick-ul analogic și poate interacționa prin butoane:
 
 - Buton 1 / SW joystick – descoperă celule (configurat cu **pull-up intern**)
