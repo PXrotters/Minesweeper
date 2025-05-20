@@ -77,7 +77,7 @@ Pozițiile bombelor sunt generate aleator, iar valorile vecinilor sunt calculate
 | `drawFlag()` | Desen steag într-o celulă |
 | `drawCrossedPickaxes()` | Desen târnăcoape încrucișate |
 | `animateBombReveal()` | Animație de reveal bombă |
-| `drawSplash()` | Desen ecran START |
+| `drawSplash()` | Desen ecran **START** |
 | `drawDifficultyMenu()` | Desen meniu **Settings** |
 | `drawConfirmQuitMenu()` | Desen **QUIT-MENU** |
 
