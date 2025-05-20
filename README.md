@@ -127,7 +127,7 @@ Pozițiile bombelor sunt generate aleator, iar valorile vecinilor sunt calculate
   </tr>
   <tr>
     <td align="center" colspan="3">
-      <img src="Images/time_up.jpg" width="220"/><br/>
+      <img src="Images/times_up.jpg" width="220"/><br/>
       <b>Timp Expirat</b>
     </td>
   </tr>
