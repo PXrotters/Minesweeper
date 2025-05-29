@@ -16,7 +16,7 @@
 #define BTN_FLAG       4   // Buton steag (active-HIGH)
 #define BTN_RST        6   // Buton reset / confirm nume (active-HIGH)
 
-#define BUZZER         5   // Buzzer pentru sunete
+#define BUZZER         3   // Buzzer pentru sunete
 
 // —————————————————————————————————————————————————————————————————————————
 //                         OBIECT TFT (ST7735 pe SPI)
@@ -49,74 +49,144 @@ const unsigned long GAME_TIME = 5UL * 60UL * 1000UL;  // timpul jocului = 5 minu
 uint16_t cellsUncovered = 0;                          // celule descoperite
 
 // ————————————————————————————————————————————————————————————————————————————————————————
-//                                    DEBOUNCE PENTRU BUTOANE
+//                                    INITIALIZARE BUTOANE
 // ————————————————————————————————————————————————————————————————————————————————————————
-// Detectare apasare active-LOW (pull-down extern)
-bool isButtonPressedActiveLow(uint8_t pin) {
-  if (digitalRead(pin) == LOW) {
+// Functie inlocuitoare pentru pinMode
+void configurePinsWithRegisters() {
+  // JOY_SW_PIN = PD2 -> input pull-up
+  DDRD &= ~(1 << PD2);     // setam pin ca input
+  PORTD |= (1 << PD2);     // rezistenta interna de pull-up
+
+  // BTN_FLAG = PD4 -> input (pull-down extern)
+  DDRD &= ~(1 << PD4);      // setam pin ca input
+  PORTD &= ~(1 << PD4);     // pull-down = nu activam pull-up
+
+  // BTN_RST = PD6 -> input (pull-down extern)
+  DDRD &= ~(1 << PD6);
+  PORTD &= ~(1 << PD6);
+
+  // BUZZER = PD5 -> output
+  DDRD |= (1 << PD5);
+  PORTD &= ~(1 << PD5);    // initial LOW
+}
+
+// Detectare apasare active-LOW
+bool isButtonPressedActiveLow_PD2() {
+  if (!(PIND & (1 << PD2))) {
     delay(50);
-    if (digitalRead(pin) == LOW) {
-      while (digitalRead(pin) == LOW) { }
+    if (!(PIND & (1 << PD2))) {
+      while (!(PIND & (1 << PD2))) {}
       return true;
     }
   }
   return false;
 }
 
-// Detectare apasare active-HIGH (pull-down extern)
-bool isButtonPressedActiveHigh(uint8_t pin) {
-  if (digitalRead(pin) == HIGH) {
+// Detectare apasare active-HIGH
+bool isButtonPressedActiveHigh_PD4() {
+  if (PIND & (1 << PD4)) {
     delay(50);
-    if (digitalRead(pin) == HIGH) {
-      while (digitalRead(pin) == HIGH) { }
+    if (PIND & (1 << PD4)) {
+      while (PIND & (1 << PD4)) {}
       return true;
     }
   }
   return false;
 }
+
+bool isButtonPressedActiveHigh_PD6() {
+  if (PIND & (1 << PD6)) {
+    delay(50);
+    if (PIND & (1 << PD6)) {
+      while (PIND & (1 << PD6)) {}
+      return true;
+    }
+  }
+  return false;
+}
+
+int fastAnalogReadA0() {
+  ADMUX = (1 << REFS0) | 0;        // Selectam canalul ADC0 (A0) si referinta AVcc
+  ADCSRA |= (1 << ADSC);           // Porneste conversia
+  while (ADCSRA & (1 << ADSC));    // Asteapta ca bitul ADSC sa devina 0 = conversia e gata
+  return ADC;                      // Returneaza valoarea (10 biti din registrul ADC)
+}
+
+int fastAnalogReadA1() {
+  ADMUX = (1 << REFS0) | 1;        // Selectam canalul ADC1 (A1) si referinta AVcc
+  ADCSRA |= (1 << ADSC);           
+  while (ADCSRA & (1 << ADSC));    
+  return ADC;
+}
+
 
 // ———————————————————————————————————————————————————————————————————————————————————————————
 //                                            SUNETE & BOARD
 // ———————————————————————————————————————————————————————————————————————————————————————————
-// Sir de tonuri la bomba
-void playBombSequence() {
-  // 3 tonuri descendente, legate
-  for (int freq = 120; freq >= 60; freq -= 20) {
-    tone(BUZZER, freq, 100);
-    delay(120);
-  }
 
-  tone(BUZZER, 300, 300);
-  delay(320);
-  tone(BUZZER, 450, 200);
-  delay(220);
-
-  // Eco rapid (2 ecouri scurte, mai inalte)
-  tone(BUZZER, 600, 80);
-  delay(100);
-  tone(BUZZER, 700, 60);
-  delay(80);
-  
-  // Final, cadere in liniste
-  noTone(BUZZER);
-  delay(100);
+// Folosim Timer2 pe 8 biti pentru PWM -> Timer0 implicit in Arduino pentru delay, millis()
+// Porneste semnalul PWM pe PD5 (OC0B) cu frecventa `freq` in Hz
+void startTone(uint16_t freq) {
+  uint16_t ocr = (F_CPU / (2UL * 32UL * freq)) - 1; // prescaler 32
+  DDRD |= (1 << PD3); // OC2B -> Setam PD3 ca output
+  TCCR2A = (1 << COM2B0) | (1 << WGM21);
+  TCCR2B = (1 << WGM22) | (1 << CS21) | (1 << CS20); // prescaler 32
+  OCR2A = ocr;
 }
 
-// Sir de tonuri la castig
+void stopTone() {
+  TCCR2A = 0;
+  TCCR2B = 0;
+  PORTD &= ~(1 << PD3);
+}
+
+// Sir de tonuri la bomba
+void playBombSequence() {
+  const uint16_t bombDrop[] = { 200, 180, 160, 140, 120, 100, 90, 80 };
+  for (int i = 0; i < 8; i++) {
+    startTone(bombDrop[i]);
+    delay(70 - i * 5);
+    stopTone();
+    delay(20);
+  }
+
+  for (int i = 0; i < 4; i++) {
+    startTone(150 - i * 30);
+    delay(40);
+    stopTone();
+    delay(30);
+    startTone(120 - i * 20);
+    delay(40);
+    stopTone();
+    delay(30);
+  }
+
+  startTone(60);
+  delay(200);
+  stopTone();
+}
+
+// Sir de tonuri la WIN
 void playWinSequence() {
-  tone(BUZZER, 523, 150); delay(180);
-  tone(BUZZER, 659, 150); delay(180);
-  tone(BUZZER, 784, 150); delay(180);
+  int melody1[] = { 330, 392, 440, 523 };
+  for (int i = 0; i < 4; i++) {
+    startTone(melody1[i]);
+    delay(150);
+    stopTone();
+    delay(50);
+  }
 
-  tone(BUZZER, 1047, 200); delay(240);
+  int melody2[] = { 523, 494, 440, 392 };
+  for (int i = 0; i < 4; i++) {
+    startTone(melody2[i]);
+    delay(120);
+    stopTone();
+    delay(30);
+  }
 
-  tone(BUZZER, 784, 100);  delay(120);
-  tone(BUZZER, 659, 100);  delay(120);
-  tone(BUZZER, 523, 100);  delay(120);
-
-  tone(BUZZER, 440, 300);
-  delay(320);
-  noTone(BUZZER);
+  startTone(262); delay(100); stopTone(); delay(20);
+  startTone(330); delay(100); stopTone(); delay(20);
+  startTone(392); delay(300); stopTone();
 }
 
 // Aseaza bombe si calculeaza valorile vecinilor
@@ -555,10 +625,7 @@ void setup() {
   // ——————————————————————————————————————————————
   // Configurare pini de intrare/iesire
   // ——————————————————————————————————————————————
-  pinMode(JOY_SW_PIN, INPUT_PULLUP);  // buton joystick (activ LOW, pull-up intern)
-  pinMode(BTN_FLAG, INPUT);           // buton steag (activ HIGH, pull-down extern)
-  pinMode(BTN_RST, INPUT);            // buton reset/select name (activ HIGH, pull-down extern)
-  pinMode(BUZZER, OUTPUT);            // buzzer pentru semnale sonore
+  configurePinsWithRegisters();
 
   // ——————————————————————————————————————————————
   // Initializare afisaj TFT
@@ -580,12 +647,12 @@ void loop() {
         splashDrawn = true;
       }
       // Citeste miscarea pe axa Y a joystick-ului pentru a putea selecta dintre Start si Settings
-      vy = analogRead(JOY_Y_PIN);
+      vy = fastAnalogReadA1();
       if (vy < 300 && splashOption > 0)     { splashOption--;  delay(150); drawSplash(); }
       if (vy > 700 && splashOption < 1)     { splashOption++;  delay(150); drawSplash(); }
 
       // Confirmare optiune cu butonul SW (active LOW)
-      if (isButtonPressedActiveLow(JOY_SW_PIN)) {
+      if ((isButtonPressedActiveLow_PD2())) {
         delay(150);
         if (splashOption == 0) {
           // Start Game → treci la ecranul de introducere nume
@@ -608,12 +675,12 @@ void loop() {
         settingsDrawn = true;
       }
       // Citim joystick-ul pentru a schimba dificulatea
-      vy = analogRead(JOY_Y_PIN);
+      vy = fastAnalogReadA1();
       if (vy < 300 && diffOption > 0)       { diffOption--;  delay(150); drawDifficultyMenu(); }
       if (vy > 700 && diffOption < 2)       { diffOption++;  delay(150); drawDifficultyMenu(); }
 
       // Confirmam selectia cu SW
-      if (isButtonPressedActiveLow(JOY_SW_PIN)) {
+      if ((isButtonPressedActiveLow_PD2())) {
         delay(150);
         // Seteaza difficultyIndex si bombsCount corespunzator
         difficultyIndex = diffOption;
@@ -656,8 +723,8 @@ void loop() {
       }
 
       // Navigare in grid-ul de litere
-      vx = analogRead(JOY_X_PIN);
-      vy = analogRead(JOY_Y_PIN);
+      vx = fastAnalogReadA0();
+      vy = fastAnalogReadA1();
       if      (vx < 300 && nameC > 0)       { nameC--; delay(150); }
       else if (vx > 700 && nameC < LCOLS-1) { nameC++; delay(150); }
       if      (vy < 300 && nameR > 0)       { nameR--; delay(150); }
@@ -675,7 +742,7 @@ void loop() {
       tft.print(playerName);
 
       // Confirmam litera cu SW
-      if (isButtonPressedActiveLow(JOY_SW_PIN) && nameLength < 8) {
+      if ((isButtonPressedActiveLow_PD2()) && nameLength < 8) {
         uint8_t idx = nameR * LCOLS + nameC;
         if (idx < 26) {
           playerName[nameLength++] = 'A' + idx;
@@ -685,7 +752,7 @@ void loop() {
       }
 
       // Confirmam numele complet cu butonul albastru (pin 4) → treci la PLAY
-      if (isButtonPressedActiveHigh(BTN_FLAG) && nameLength > 0) {
+      if (isButtonPressedActiveHigh_PD4() && nameLength > 0) {
         generateBoard();
         gameStartTime  = millis();
         cellsUncovered = 0;
@@ -697,7 +764,7 @@ void loop() {
       }
 
       // Anuleaza si revino la ecranul principal cu butonul alb (pin 6)
-      if (isButtonPressedActiveHigh(BTN_RST)) {
+      if (isButtonPressedActiveHigh_PD6()) {
         gameState   = STATE_SPLASH;
         splashDrawn = false;
         menuInit    = false;
@@ -710,7 +777,7 @@ void loop() {
     case STATE_PLAY:
       // Navigare cursor prin grid
       {
-        int x = analogRead(JOY_X_PIN), y = analogRead(JOY_Y_PIN);
+        int x = fastAnalogReadA0(), y = fastAnalogReadA1();
         if      (x < 300 && cursorCol > 0)      { cursorCol--; delay(150); }
         else if (x > 700 && cursorCol < COLS-1) { cursorCol++; delay(150); }
         if      (y < 300 && cursorRow > 0)      { cursorRow--; delay(150); }
@@ -722,7 +789,7 @@ void loop() {
       drawGrid();
 
       // Reset la start cu RST
-      if (isButtonPressedActiveHigh(BTN_RST)) {
+      if (isButtonPressedActiveHigh_PD6()) {
         gameState       = STATE_CONFIRM_QUIT;
         confirmDrawn    = false;
         confirmOption   = 0;
@@ -730,13 +797,13 @@ void loop() {
       }
 
       // Pune/ia steag
-      if (isButtonPressedActiveHigh(BTN_FLAG) && hidden[cursorRow][cursorCol]) {
+      if (isButtonPressedActiveHigh_PD4() && hidden[cursorRow][cursorCol]) {
         flagged[cursorRow][cursorCol] = !flagged[cursorRow][cursorCol];
         delay(200);
       }
 
       // Descoperire celula
-      if (isButtonPressedActiveLow(JOY_SW_PIN) && hidden[cursorRow][cursorCol] && !flagged[cursorRow][cursorCol]) {
+      if ((isButtonPressedActiveLow_PD2()) && hidden[cursorRow][cursorCol] && !flagged[cursorRow][cursorCol]) {
         // Cazul in care este bomba (animatie + game over)
         if (board[cursorRow][cursorCol] == 9) {
           animateBombReveal();
@@ -776,12 +843,12 @@ void loop() {
             }
 
             // Navigare sus/jos
-            int vy = analogRead(JOY_Y_PIN);
+            int vy = fastAnalogReadA1();
             if (vy < 300 && sel > 0) { sel = 0; delay(150); }
             if (vy > 700 && sel < 1) { sel = 1; delay(150); }
 
             // Confirmare
-            if (isButtonPressedActiveLow(JOY_SW_PIN)) {
+            if ((isButtonPressedActiveLow_PD2())) {
               delay(150);
               if (sel == 0) {
                 // → Restart: refacem board-ul si resetam timpul
@@ -846,12 +913,12 @@ void loop() {
             }
 
             // Navigare sus/jos
-            int vy = analogRead(JOY_Y_PIN);
+            int vy = fastAnalogReadA1();
             if (vy < 300 && sel > 0) { sel = 0; delay(150); }
             if (vy > 700 && sel < 1) { sel = 1; delay(150); }
 
             // Confirmare
-            if (isButtonPressedActiveLow(JOY_SW_PIN)) {
+            if ((isButtonPressedActiveLow_PD2())) {
               delay(150);
               if (sel == 0) {
                 // → Restart: refacem board-ul si resetam timpul
@@ -906,12 +973,12 @@ void loop() {
           }
 
           // Navigare sus/jos
-          int vy = analogRead(JOY_Y_PIN);
+          int vy = fastAnalogReadA1();
           if (vy < 300 && sel > 0) { sel = 0; delay(150); }
           if (vy > 700 && sel < 1) { sel = 1; delay(150); }
 
           // Confirmare
-          if (isButtonPressedActiveLow(JOY_SW_PIN)) {
+          if ((isButtonPressedActiveLow_PD2())) {
             delay(150);
             if (sel == 0) {
               // → Restart: refacem board-ul si resetam timpul
@@ -946,7 +1013,7 @@ void loop() {
       }
 
       // Navigatie sus/jos
-      vy = analogRead(JOY_Y_PIN);
+      vy = fastAnalogReadA1();
       if (vy < 300 && confirmOption > 0) {
         confirmOption--;
         delay(150);
@@ -959,7 +1026,7 @@ void loop() {
       }
 
       // Confirmare cu SW
-      if (isButtonPressedActiveLow(JOY_SW_PIN)) {
+      if ((isButtonPressedActiveLow_PD2())) {
         delay(150);
         if (confirmOption == 1) {
           // Yes → revenire la meniu principal
